@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###########################################################################
-# $Id$
+
+__version__ = "0.1"
+__revision__ = "$Id$"
 
 import sys
 import getopt
@@ -30,12 +32,14 @@ from reportlab.pdfbase.ttfonts import TTFont, TTFError
 def exit_usage():
     print "Usage: %s [-fvS] [-s font-size] -o output.pdf font.ttf..." % (sys.argv[0],)
     print """\
+Create a sample sheet from the list of TrueType fonts.
 
     -v      verbose
     -f      skip broken fonts rather than returning an error
     -S      Don't sort.  Fonts will be displayed in the order specified
             on the command line
 """
+    print "Version %s" % (__version__,)
     sys.exit(2)
 
 def verbose_print(s):
