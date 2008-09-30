@@ -27,12 +27,13 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 def exit_usage():
-    print "Usage: %s [-fv] [-s font-size] -o output.pdf file1.ttf..." % (sys.argv[0],)
+    print "Usage: %s [-fvS] [-s font-size] -o output.pdf file1.ttf..." % (sys.argv[0],)
     print """\
 
     -v      verbose
     -f      skip broken fonts rather than returning an error
-
+    -S      Don't sort.  Fonts will be displayed in the order specified
+            on the command line
 """
     sys.exit(2)
 
@@ -42,7 +43,7 @@ def verbose_print(s):
 
 # Parse arguments
 try:
-    (options, arguments) = getopt.getopt(sys.argv[1:], "vfo:s:")
+    (options, arguments) = getopt.getopt(sys.argv[1:], "vfSo:s:")
 except getopt.GetoptError, exc:
     print >>sys.stderr, "error: %s" % (str(exc),)
     exit_usage()
@@ -51,6 +52,7 @@ verbose = False
 allow_broken_fonts = False
 output_filename = None
 font_size = 12.0
+sort_fonts = True
 for (opt, optarg) in options:
     if opt == '-v':
         verbose = True
@@ -60,6 +62,8 @@ for (opt, optarg) in options:
         output_filename = optarg
     elif opt == '-s':
         font_size = float(optarg)
+    elif opt == '-S':
+        sort_fonts = False
     else:
         raise AssertionErrror("BUG: unrecognized option %r" % (opt,))
 if not arguments:
@@ -92,6 +96,10 @@ for i, ttf_filename in enumerate(arguments):
             face_name = face_name.decode('latin1')
     verbose_print("   -> %r" % (face_name,))
     fonts.append((font_id, font, face_name))
+
+# Sort fonts by face_name
+if sort_fonts:
+    fonts.sort(key=lambda tup: tup[2])
 
 # Register fonts
 for (font_id, font, face_name) in fonts:
