@@ -24,6 +24,7 @@ import getopt
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 def exit_usage():
@@ -53,6 +54,8 @@ allow_broken_fonts = False
 output_filename = None
 font_size = 12.0
 sort_fonts = True
+top_margin = 1.0 * inch
+bottom_margin = 1.0 * inch
 for (opt, optarg) in options:
     if opt == '-v':
         verbose = True
@@ -109,29 +112,44 @@ for (font_id, font, face_name) in fonts:
 verbose_print("Setting up canvas ...")
 page_size = letter
 pdf = Canvas(output_filename, pagesize=page_size)
-
-# Render once so we can figure out the bounding box
-text = pdf.beginText(0, 0)
-width = 0
-for (font_id, font, face_name) in fonts:
-    verbose_print("Pre-rendering font %r" % (face_name,))
-    text.setFont(font_id, font_size)
-    text.textOut(face_name)
-    width = max(width, text.getX())
-    text.textLine("")
-height = abs(text.getY())
-
-# Render again, centering the text
-text = pdf.beginText((page_size[0]-width)/2.0, (page_size[1]+height)/2.0)
-for (font_id, font, face_name) in fonts:
-    verbose_print("Rendering font %r" % (face_name,))
-    text.setFont(font_id, font_size)
-    text.textOut(face_name)
-    text.textLine("")
-
 pdf.setStrokeColorRGB(1, 0, 0)
-pdf.drawText(text)
-pdf.showPage()
+
+page_height = page_size[1] - top_margin - bottom_margin
+
+i = 0
+while i < len(fonts):
+    # Render once so we can figure out the bounding box
+    text = pdf.beginText(0, 0)
+    width = height = 0
+    j = i
+    page_fonts = [] # fonts shown on this page
+    while j < len(fonts):
+        (font_id, font, face_name) = fonts[j]
+        prev_height = height
+        verbose_print("Pre-rendering font %r" % (face_name,))
+        text.setFont(font_id, font_size)
+        text.textOut(face_name)
+        width = max(width, text.getX())
+        text.textLine("")
+        height = abs(text.getY())
+        if height > page_height:
+            height = prev_height
+            break
+        else:
+            page_fonts.append(fonts[j])
+            j += 1
+
+    # Render again, centering the text
+    text = pdf.beginText((page_size[0]-width)/2.0, (page_size[1]+height)/2.0)
+    for (font_id, font, face_name) in page_fonts:
+        verbose_print("Rendering font %r" % (face_name,))
+        text.setFont(font_id, font_size)
+        text.textOut(face_name)
+        text.textLine("")
+
+    pdf.drawText(text)
+    pdf.showPage()
+    i += len(page_fonts)
 
 verbose_print("Writing %r" % (output_filename,))
 pdf.save()
