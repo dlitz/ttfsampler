@@ -28,7 +28,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 def exit_usage():
-    print "Usage: %s [-fvS] [-s font-size] -o output.pdf file1.ttf..." % (sys.argv[0],)
+    print "Usage: %s [-fvS] [-s font-size] -o output.pdf font.ttf..." % (sys.argv[0],)
     print """\
 
     -v      verbose
