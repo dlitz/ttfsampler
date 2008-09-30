@@ -82,8 +82,16 @@ for i, ttf_filename in enumerate(arguments):
         else:
             print >>sys.stderr, "error: can't use font %s: %s" % (ttf_filename, str(exc))
             sys.exit(1)
-    verbose_print("   -> %r" % (font.face.fullName,))
-    fonts.append((font_id, font, font.face.fullName))
+
+    face_name = font.face.fullName
+    # Decode face name to Unicode.  Try UTF-8, and fall back to Latin-1
+    if not isinstance(face_name, unicode):
+        try:
+            face_name = face_name.decode('utf-8')
+        except UnicodeDecodeError:
+            face_name = face_name.decode('latin1')
+    verbose_print("   -> %r" % (face_name,))
+    fonts.append((font_id, font, face_name))
 
 # Register fonts
 for (font_id, font, face_name) in fonts:
