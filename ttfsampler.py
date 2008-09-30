@@ -44,7 +44,7 @@ def verbose_print(s):
 try:
     (options, arguments) = getopt.getopt(sys.argv[1:], "vfo:s:")
 except getopt.GetoptError, exc:
-    print >>sys.stderr, "error: " % (str(exc),)
+    print >>sys.stderr, "error: %s" % (str(exc),)
     exit_usage()
 
 verbose = False
