@@ -105,6 +105,7 @@ if output_filename is None:
 verbose_print(1, "Loading fonts...")
 fonts = []
 psfontnames = {}
+skipped_fonts = 0
 for i, ttf_filename in enumerate(arguments):
     font_id = "_font%d" % (i,)
     verbose_print(2, "  Loading font %s ..." % (ttf_filename,))
@@ -113,6 +114,7 @@ for i, ttf_filename in enumerate(arguments):
     except TTFError, exc:
         if allow_broken_fonts:
             print >>sys.stderr, "warning: skipping font %s: %s" % (ttf_filename, str(exc))
+            skipped_fonts += 1
             continue
         else:
             print >>sys.stderr, "error: can't use font %s: %s" % (ttf_filename, str(exc))
@@ -129,6 +131,7 @@ for i, ttf_filename in enumerate(arguments):
     if font.face.name in psfontnames:
         if allow_broken_fonts:
             print >>sys.stderr, "warning: skipping font %s; has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
+            skipped_fonts += 1
             continue
         else:
             print >>sys.stderr, "error: font %s has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
@@ -144,7 +147,7 @@ if sort_fonts:
     fonts.sort(key=lambda tup: tup[2])
 
 # Register fonts
-verbose_print(1, "Registering fonts...")
+verbose_print(1, "Registering %d fonts..." % (len(fonts),))
 for (font_id, font, face_name) in fonts:
     verbose_print(2, "  Registering font %r ..." % (face_name,))
     pdfmetrics.registerFont(font)
@@ -191,7 +194,9 @@ while i < len(fonts):
     pdf.showPage()
     i += len(page_fonts)
 
-verbose_print(1, "Writing %d pages to %r" % (page_count, output_filename,))
+if skipped_fonts:
+    print >>sys.stderr, "warning: skipped %d fonts" % (skipped_fonts,)
+verbose_print(1, "Writing %d pages (%d fonts) to %r" % (page_count, len(fonts), output_filename,))
 pdf.save()
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
