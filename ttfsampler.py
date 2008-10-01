@@ -46,6 +46,15 @@ def verbose_print(verbosity, s):
     if verbosity_setting >= verbosity:
         print s
 
+def render_line(text, font_id, font_size, face_name):
+    start_x = text.getX()
+    text.setFont(font_id, font_size)
+    text.textOut(face_name)
+    end_x = text.getX()
+    text.textLine("")
+    width = abs(end_x - start_x)
+    return width
+
 # Parse arguments
 try:
     (options, arguments) = getopt.getopt(sys.argv[1:], "vfSo:s:")
@@ -149,10 +158,8 @@ while i < len(fonts):
         (font_id, font, face_name) = fonts[j]
         prev_height = height
         verbose_print(3, "  Pre-rendering font %r" % (face_name,))
-        text.setFont(font_id, font_size)
-        text.textOut(face_name)
-        width = max(width, text.getX())
-        text.textLine("")
+        linewidth = render_line(text, font_id, font_size, face_name)
+        width = max(width, linewidth)
         height = abs(text.getY())
         if height > page_height:
             height = prev_height
@@ -165,9 +172,7 @@ while i < len(fonts):
     text = pdf.beginText((page_size[0]-width)/2.0, (page_size[1]+height)/2.0)
     for (font_id, font, face_name) in page_fonts:
         verbose_print(2, "  Rendering font %r" % (face_name,))
-        text.setFont(font_id, font_size)
-        text.textOut(face_name)
-        text.textLine("")
+        render_line(text, font_id, font_size, face_name)
 
     pdf.drawText(text)
     pdf.showPage()
