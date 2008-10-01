@@ -30,20 +30,20 @@ from reportlab.lib.units import inch
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 def exit_usage():
-    print "Usage: %s [-fvS] [-s font-size] -o output.pdf font.ttf..." % (sys.argv[0],)
+    print "Usage: %s [-fSv] [-s font-size] -o output.pdf font.ttf..." % (sys.argv[0],)
     print """\
 Create a sample sheet from the list of TrueType fonts.
 
-    -v      verbose
     -f      skip broken or duplicate fonts rather than returning an error
     -S      Don't sort.  Fonts will be displayed in the order specified
             on the command line
+    -v      Increase verbosity.
 """
     print "Version %s" % (__version__,)
     sys.exit(2)
 
-def verbose_print(s):
-    if verbose:
+def verbose_print(verbosity, s):
+    if verbosity_setting >= verbosity:
         print s
 
 # Parse arguments
@@ -53,7 +53,7 @@ except getopt.GetoptError, exc:
     print >>sys.stderr, "error: %s" % (str(exc),)
     exit_usage()
 
-verbose = False
+verbosity_setting = 0
 allow_broken_fonts = False
 output_filename = None
 font_size = 12.0
@@ -62,7 +62,7 @@ top_margin = 1.0 * inch
 bottom_margin = 1.0 * inch
 for (opt, optarg) in options:
     if opt == '-v':
-        verbose = True
+        verbosity_setting += 1
     elif opt == '-f':
         allow_broken_fonts = True
     elif opt == '-o':
@@ -80,11 +80,12 @@ if output_filename is None:
     print >>sys.stderr, "error: no output file specified"
     exit_usage()
 
+verbose_print(1, "Loading fonts...")
 fonts = []
 psfontnames = {}
 for i, ttf_filename in enumerate(arguments):
     font_id = "_font%d" % (i,)
-    verbose_print("Loading font %s ..." % (ttf_filename,))
+    verbose_print(2, "  Loading font %s ..." % (ttf_filename,))
     try:
         font = TTFont(font_id, ttf_filename)
     except TTFError, exc:
@@ -113,7 +114,7 @@ for i, ttf_filename in enumerate(arguments):
     else:
         psfontnames[font.face.name] = ttf_filename
 
-    verbose_print("   -> %r" % (face_name,))
+    verbose_print(3, "  -> %r" % (face_name,))
     fonts.append((font_id, font, face_name))
 
 # Sort fonts by face_name
@@ -121,11 +122,12 @@ if sort_fonts:
     fonts.sort(key=lambda tup: tup[2])
 
 # Register fonts
+verbose_print(1, "Registering fonts...")
 for (font_id, font, face_name) in fonts:
-    verbose_print("Registering font %s ..." % (face_name,))
+    verbose_print(2, "  Registering font %r ..." % (face_name,))
     pdfmetrics.registerFont(font)
 
-verbose_print("Setting up canvas ...")
+verbose_print(2, "Setting up canvas ...")
 page_size = letter
 pdf = Canvas(output_filename, pagesize=page_size)
 pdf.setStrokeColorRGB(1, 0, 0)
@@ -136,6 +138,7 @@ i = 0
 page_count = 0
 while i < len(fonts):
     page_count += 1
+    verbose_print(1, "Rendering page %d ..." % (page_count,))
 
     # Render once so we can figure out the bounding box
     text = pdf.beginText(0, 0)
@@ -145,7 +148,7 @@ while i < len(fonts):
     while j < len(fonts):
         (font_id, font, face_name) = fonts[j]
         prev_height = height
-        verbose_print("Pre-rendering font %r" % (face_name,))
+        verbose_print(3, "  Pre-rendering font %r" % (face_name,))
         text.setFont(font_id, font_size)
         text.textOut(face_name)
         width = max(width, text.getX())
@@ -161,7 +164,7 @@ while i < len(fonts):
     # Render again, centering the text
     text = pdf.beginText((page_size[0]-width)/2.0, (page_size[1]+height)/2.0)
     for (font_id, font, face_name) in page_fonts:
-        verbose_print("Rendering font %r" % (face_name,))
+        verbose_print(2, "  Rendering font %r" % (face_name,))
         text.setFont(font_id, font_size)
         text.textOut(face_name)
         text.textLine("")
@@ -170,7 +173,7 @@ while i < len(fonts):
     pdf.showPage()
     i += len(page_fonts)
 
-verbose_print("Writing %d pages to %r" % (page_count, output_filename,))
+verbose_print(1, "Writing %d pages to %r" % (page_count, output_filename,))
 pdf.save()
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
