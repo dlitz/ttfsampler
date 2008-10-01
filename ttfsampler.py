@@ -22,6 +22,7 @@ __revision__ = "$Id$"
 
 import sys
 import getopt
+import locale
 
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase import pdfmetrics
@@ -30,13 +31,16 @@ from reportlab.lib.units import inch
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 def exit_usage():
-    print "Usage: %s [-fSv] [-s font-size] -o output.pdf font.ttf..." % (sys.argv[0],)
+    print "Usage: %s [-fSv] [-s font-size] [-t text] -o output.pdf font.ttf..." % (sys.argv[0],)
     print """\
 Create a sample sheet from the list of TrueType fonts.
 
     -f      Skip broken or duplicate fonts rather than returning an error.
     -S      Don't sort.  Fonts will be displayed in the order specified
             on the command line.
+    -t      Specify text to render instead of the default of using the font
+            name.  (When this option is enabled, the font name will be
+            displayed before the rendered text.)
     -v      Increase verbosity.
 """
     print "Version %s" % (__version__,)
@@ -48,8 +52,14 @@ def verbose_print(verbosity, s):
 
 def render_line(text, font_id, font_size, face_name):
     start_x = text.getX()
-    text.setFont(font_id, font_size)
-    text.textOut(face_name)
+    if specified_text is not None:
+        text.setFont(font_id, font_size)
+        text.textOut(specified_text)
+        text.setFont("Times-Roman", font_size)
+        text.textOut(u"  (%s)" % (face_name,))
+    else:
+        text.setFont(font_id, font_size)
+        text.textOut(face_name)
     end_x = text.getX()
     text.textLine("")
     width = abs(end_x - start_x)
@@ -57,7 +67,7 @@ def render_line(text, font_id, font_size, face_name):
 
 # Parse arguments
 try:
-    (options, arguments) = getopt.getopt(sys.argv[1:], "vfSo:s:")
+    (options, arguments) = getopt.getopt(sys.argv[1:], "vfSo:s:t:")
 except getopt.GetoptError, exc:
     print >>sys.stderr, "error: %s" % (str(exc),)
     exit_usage()
@@ -69,6 +79,7 @@ font_size = 12.0
 sort_fonts = True
 top_margin = 1.0 * inch
 bottom_margin = 1.0 * inch
+specified_text = None
 for (opt, optarg) in options:
     if opt == '-v':
         verbosity_setting += 1
@@ -80,6 +91,8 @@ for (opt, optarg) in options:
         font_size = float(optarg)
     elif opt == '-S':
         sort_fonts = False
+    elif opt == '-t':
+        specified_text = optarg.decode(locale.getpreferredencoding())
     else:
         raise AssertionErrror("BUG: unrecognized option %r" % (opt,))
 if not arguments:
