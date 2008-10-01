@@ -35,7 +35,7 @@ def exit_usage():
 Create a sample sheet from the list of TrueType fonts.
 
     -v      verbose
-    -f      skip broken fonts rather than returning an error
+    -f      skip broken or duplicate fonts rather than returning an error
     -S      Don't sort.  Fonts will be displayed in the order specified
             on the command line
 """
@@ -81,6 +81,7 @@ if output_filename is None:
     exit_usage()
 
 fonts = []
+psfontnames = {}
 for i, ttf_filename in enumerate(arguments):
     font_id = "_font%d" % (i,)
     verbose_print("Loading font %s ..." % (ttf_filename,))
@@ -101,6 +102,17 @@ for i, ttf_filename in enumerate(arguments):
             face_name = face_name.decode('utf-8')
         except UnicodeDecodeError:
             face_name = face_name.decode('latin1')
+
+    if font.face.name in psfontnames:
+        if allow_broken_fonts:
+            print >>sys.stderr, "warning: skipping font %s; has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
+            continue
+        else:
+            print >>sys.stderr, "error: font %s has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
+            sys.exit(1)
+    else:
+        psfontnames[font.face.name] = ttf_filename
+
     verbose_print("   -> %r" % (face_name,))
     fonts.append((font_id, font, face_name))
 
