@@ -34,9 +34,9 @@ def exit_usage():
     print """\
 Create a sample sheet from the list of TrueType fonts.
 
-    -f      skip broken or duplicate fonts rather than returning an error
+    -f      Skip broken or duplicate fonts rather than returning an error.
     -S      Don't sort.  Fonts will be displayed in the order specified
-            on the command line
+            on the command line.
     -v      Increase verbosity.
 """
     print "Version %s" % (__version__,)
