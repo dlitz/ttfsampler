@@ -133,7 +133,10 @@ pdf.setStrokeColorRGB(1, 0, 0)
 page_height = page_size[1] - top_margin - bottom_margin
 
 i = 0
+page_count = 0
 while i < len(fonts):
+    page_count += 1
+
     # Render once so we can figure out the bounding box
     text = pdf.beginText(0, 0)
     width = height = 0
@@ -167,7 +170,7 @@ while i < len(fonts):
     pdf.showPage()
     i += len(page_fonts)
 
-verbose_print("Writing %r" % (output_filename,))
+verbose_print("Writing %d pages to %r" % (page_count, output_filename,))
 pdf.save()
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
