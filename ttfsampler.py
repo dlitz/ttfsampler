@@ -33,7 +33,7 @@ from reportlab.pdfbase.ttfonts import TTFont, TTFError
 def exit_usage():
     print "Usage: %s [-fSv] [-s font-size] [-t text] -o output.pdf font.ttf..." % (sys.argv[0],)
     print """\
-Create a sample sheet from the list of TrueType fonts.
+Create a sample sheet from a list of TrueType fonts.
 
     -f      Skip broken or duplicate fonts rather than returning an error.
     -S      Don't sort.  Fonts will be displayed in the order specified
