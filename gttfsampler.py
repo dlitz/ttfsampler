@@ -236,7 +236,8 @@ class MainWindow_FontSelector(T.LabelFrame):
     def button_removeSelected_click(self):
         lb = self.widgets['listbox']
 
-        indices = list(lb.curselection())
+        indices = lb.curselection()
+        indices = list(int(x) for x in indices)   # Convert tuple of strings to list of integers
         indices.sort(reverse=True)  # Sort in reverse order so we don't delete the wrong items
 
         for idx in indices:
