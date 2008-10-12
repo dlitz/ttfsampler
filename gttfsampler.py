@@ -206,7 +206,10 @@ class MainWindow_FontSelector(T.LabelFrame):
             lb.insert("end", os.path.abspath(filename))
 
     def button_addFolder_click(self):
-        dialog = tkFileDialog.Directory(self)
+        kw = {}
+        if os.environ.has_key('SystemRoot'):    # HACK for win32
+            kw['initialdir'] = os.path.join(os.environ['SystemRoot'], u"Fonts")
+        dialog = tkFileDialog.Directory(self, **kw)
         rootpath = dialog.show()
 
         if not rootpath:   # User pressed "Cancel"
