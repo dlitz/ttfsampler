@@ -37,7 +37,12 @@ def pack_widget(_w, **kw):
     _w.pack(**kw)
     return _w
 
-FILE_EXTENSIONS = "*.ttf *.otf *.TTF *.OTF" # List of file exstensions. (NB: tcl substitution will happen on this string.)
+# List of file exstensions. (NB: tcl substitution will happen on this string.)
+if os.name == 'nt':
+    # Windows isn't case-sensitive, so only use the lowercased extensions.
+    FILE_EXTENSIONS = "*.ttf *.otf"
+else:
+    FILE_EXTENSIONS = "*.ttf *.otf *.TTF *.OTF"
 
 class GUILog(object):
     def __init__(self, config, queue):
