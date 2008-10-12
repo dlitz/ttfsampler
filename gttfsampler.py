@@ -81,8 +81,8 @@ class BatchThread(threading.Thread):
                 raise
             else:
                 self.error = None
+                self.queue.put((1, "Finished successfully."))
         finally:
-            self.queue.put((1, "Finished."))
             self.finished = True
 
     def process_queue(self):
