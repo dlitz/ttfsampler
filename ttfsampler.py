@@ -122,7 +122,11 @@ class TTFSampler(object):
             self.log.debug(VERBOSITY_2 + "  Loading font %s ..." % (ttf_filename,))
             try:
                 font = TTFont(font_id, ttf_filename)
-            except TTFError, exc:
+
+                # HACK - detect IndexError bug that surfaces with some fonts
+                # TODO: Is this a ReportLab bug or a font bug?
+                font.face.makeSubset(range(128))
+            except (TTFError, IndexError), exc:
                 if self.cfg.allow_broken_fonts:
                     self.log.warning("skipping font %s: %s" % (ttf_filename, str(exc)))
                     self.skipped_fonts += 1
