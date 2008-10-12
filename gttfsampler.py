@@ -183,6 +183,7 @@ class MainWindow_FontSelector(T.LabelFrame):
         self.widgets['button_addFile'] = pack_widget(T.Button(f, text="Add file(s)..."), side="left", expand=True, fill="x")
         self.widgets['button_addFolder'] = pack_widget(T.Button(f, text="Add folder..."), side="left", expand=True, fill="x")
         self.widgets['button_removeSelected'] = pack_widget(T.Button(f, text="Remove selected"), side="left", expand=True, fill="x")
+        self.widgets['button_removeUnselected'] = pack_widget(T.Button(f, text="Remove unselected"), side="left", expand=True, fill="x")
 
         # List
         self.widgets['listbox'] = pack_widget(ScrolledListbox(self), fill="both", expand=True)
@@ -191,6 +192,7 @@ class MainWindow_FontSelector(T.LabelFrame):
         self.widgets['button_addFile']['command'] = self.button_addFile_click
         self.widgets['button_addFolder']['command'] = self.button_addFolder_click
         self.widgets['button_removeSelected']['command'] = self.button_removeSelected_click
+        self.widgets['button_removeUnselected']['command'] = self.button_removeUnselected_click
 
     def button_addFile_click(self):
         filetypes = [
@@ -242,6 +244,30 @@ class MainWindow_FontSelector(T.LabelFrame):
 
         for idx in indices:
             lb.delete(idx)
+
+    def button_removeUnselected_click(self):
+        lb = self.widgets['listbox']
+
+        indices = lb.curselection()
+        if not indices:
+            msgbox = tkMessageBox.Message(title="gTTFSampler Error", icon="error", type="ok", message="No font(s) selected.")
+            msgbox.show()
+            return
+
+        # Build a list of fonts we want to delete, by building a list of _all_
+        # the fonts, then subtracting the ones we want to keep.
+        to_remove = list(xrange(lb.index("end")))
+
+        indices = list(int(x) for x in indices)   # Convert tuple of strings to list of integers
+        indices.sort(reverse=True)  # Sort in reverse order so we don't delete the wrong items
+        for idx in indices:
+            del to_remove[idx]
+
+        # Remove whatever was not selected
+        to_remove.reverse()
+        for idx in to_remove:
+            lb.delete(idx)
+
 
     def get_filenames(self):
         return self.widgets['listbox'].get(0, "end")
