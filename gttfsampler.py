@@ -251,12 +251,25 @@ class ScrolledListbox(T.Frame):
         T.Frame.__init__(self, master)
         self.widgets = {}
 
-        self.widgets['listbox'] = pack_widget(T.Listbox(self, selectmode="extended"), side="left", expand=True, fill="both")
-        self.widgets['scrollbar'] = pack_widget(T.Scrollbar(self), side="right", fill="y")
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)
 
-        # Connect the listbox to the scrollbar
-        self.widgets['listbox']['yscrollcommand'] = self.widgets['scrollbar'].set
-        self.widgets['scrollbar']['command'] = self.widgets['listbox'].yview
+        self.widgets['listbox'] = T.Listbox(self, selectmode="extended")
+        self.widgets['listbox'].grid(row=0, column=0, sticky="nsew")
+        self.widgets['vscrollbar'] = T.Scrollbar(self)
+        self.widgets['vscrollbar'].grid(row=0, column=1, sticky="ns")
+        self.widgets['hscrollbar'] = T.Scrollbar(self, orient="horizontal")
+        self.widgets['hscrollbar'].grid(row=1, column=0, sticky="we")
+
+        # Connect the listbox to the vertical scrollbar
+        self.widgets['listbox']['yscrollcommand'] = self.widgets['vscrollbar'].set
+        self.widgets['vscrollbar']['command'] = self.widgets['listbox'].yview
+
+        # Connect the listbox to the horizontal scrollbar
+        self.widgets['listbox']['xscrollcommand'] = self.widgets['hscrollbar'].set
+        self.widgets['hscrollbar']['command'] = self.widgets['listbox'].xview
 
         # Proxy listbox methods
         for name in ('curselection', 'delete', 'get', 'index', 'insert', 'itemconfigure', 'yview'):
