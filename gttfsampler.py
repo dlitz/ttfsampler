@@ -212,7 +212,7 @@ class MainWindow_FontSelector(T.LabelFrame):
             return
         lb = self.widgets['listbox']
         for filename in filenames:
-            lb.insert("end", filename)
+            lb.insert("end", os.path.abspath(filename))
 
     def button_addFolder_click(self):
         dialog = tkFileDialog.Directory(self)
@@ -234,7 +234,7 @@ class MainWindow_FontSelector(T.LabelFrame):
             for filename in filenames:
                 for regexp in regexps:
                     if regexp.search(filename):
-                        lb.insert("end", os.path.join(dirpath, filename))
+                        lb.insert("end", os.path.abspath(os.path.join(dirpath, filename)))
                         break
 
     def button_removeSelected_click(self):
