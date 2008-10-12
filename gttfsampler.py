@@ -24,6 +24,7 @@ import Tkinter as T
 import tkFileDialog
 import tkMessageBox
 
+import sys
 import os
 import re
 import fnmatch
@@ -138,15 +139,6 @@ class MainWindow(T.Frame):
         self.widgets['button_savePDF']['command'] = self.button_savePDF_click
 
     def button_savePDF_click(self):
-        global ttfsampler
-
-        try:
-            import reportlab
-        except ImportError:
-            msgbox = tkMessageBox.Message(title="gTTFSampler Error", icon="error", parent=self, type="ok", message="The ReportLab Toolkit is not installed.")
-            msgbox.show()
-            return
-
         font_filenames = self.widgets['font_selector'].get_filenames()
         if not font_filenames:
             msgbox = tkMessageBox.Message(title="gTTFSampler Error", icon="error", parent=self, type="ok", message="No font(s) selected.")
@@ -154,8 +146,6 @@ class MainWindow(T.Frame):
             return
 
         options = self.widgets['options_selector'].get_options()
-
-        import ttfsampler
 
         dialog = tkFileDialog.SaveAs(self, title="Save PDF...", defaultextension='.pdf', filetypes=[('PDF file', '*.pdf')])
         output_filename = dialog.show()
@@ -307,6 +297,17 @@ class MainWindow_OptionsSelector(T.LabelFrame):
         return retval
 
 if __name__ == '__main__':
+    # Check if reportlab is installed
+    try:
+        import reportlab
+    except ImportError:
+        msgbox = tkMessageBox.Message(title="gTTFSampler Error", icon="error", type="ok", message="The ReportLab Toolkit is not installed.")
+        msgbox.show()
+        sys.exit(1)
+
+    # Try to import ttfsampler (this should always work)
+    import ttfsampler
+
     #root = T.Tk()
     #root.withdraw()
     #top = T.Toplevel(root, class_="GTTFSampler")
