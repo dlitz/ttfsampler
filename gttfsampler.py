@@ -165,7 +165,7 @@ class MainWindow(T.Frame):
         cfg = ttfsampler.Config()
         cfg.verbosity = 1
         cfg.font_size = float(options['fontSize'])
-        cfg.allow_broken_fonts = options['ignoreBad']
+        cfg.allow_broken_fonts = True   # Always skip broken/duplicate fonts
         cfg.specified_text = options['specifyText']
         cfg.input_filenames = font_filenames
         cfg.output_filename = output_filename
@@ -271,7 +271,6 @@ class MainWindow_OptionsSelector(T.LabelFrame):
         self.widgets = {}
         self.vars = {
             'fontSize': T.IntVar(value=12),
-            'ignoreBad': T.BooleanVar(value=True),
             'specifyText_check': T.BooleanVar(value=False),
             'specifyText_text': T.StringVar(value="The quick brown fox jumps over the lazy dog."),
         }
@@ -281,9 +280,6 @@ class MainWindow_OptionsSelector(T.LabelFrame):
         pack_widget(T.Label(f, text="Font size:", justify="left"), side="left")
         self.widgets['spinbox_fontSize'] = pack_widget(T.Spinbox(f, from_=1, to=100, textvariable=self.vars['fontSize']), side="left")
 
-        # Ignore broken/duplicate fonts
-        self.widgets['check_ignoreBad'] = pack_widget(T.Checkbutton(self, text="Ignore broken/duplicate fonts", justify="left", variable=self.vars['ignoreBad']), anchor="w")
-
         # Specify text
         f = pack_widget(T.Frame(self), anchor="w", fill="x")
         self.widgets['check_specifyText'] = pack_widget(T.Checkbutton(f, text="Specify text:", justify="left", variable=self.vars['specifyText_check']), side="left")
@@ -292,7 +288,6 @@ class MainWindow_OptionsSelector(T.LabelFrame):
     def get_options(self):
         retval = {}
         retval['fontSize'] = self.vars['fontSize'].get()
-        retval['ignoreBad'] = self.vars['ignoreBad'].get()
         if self.vars['specifyText_check'].get():
             retval['specifyText'] = self.vars['specifyText_text'].get()
         else:
