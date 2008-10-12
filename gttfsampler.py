@@ -209,7 +209,7 @@ class MainWindow_FontSelector(T.LabelFrame):
 
     def button_addFolder_click(self):
         kw = {}
-        if os.environ.has_key('SystemRoot'):    # HACK for win32
+        if os.name == 'nt' and os.environ.has_key('SystemRoot'):    # HACK for win32
             kw['initialdir'] = os.path.join(os.environ['SystemRoot'], u"Fonts")
         dialog = tkFileDialog.Directory(self, **kw)
         rootpath = dialog.show()
