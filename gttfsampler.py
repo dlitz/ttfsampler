@@ -195,6 +195,16 @@ class MainWindow_FontSelector(T.LabelFrame):
         self.widgets['button_removeUnselected']['command'] = self.button_removeUnselected_click
 
     def button_addFile_click(self):
+        if os.name == 'nt':
+            msgbox = tkMessageBox.Message(title="Another reason not to use Windows", icon="warning", parent=self.master, type="ok",
+                message="""Note: Due to a bug in the "Open File" dialog on Windows, you """
+                        """might not be able to select fonts from the Windows "Fonts" folder.  """
+                        """If this happens, try using "Add Folder..." instead, or try copying """
+                        """the fonts to another folder before adding them."""
+                        """\n\n"""
+                        """Sorry for the inconvenience.""")
+            msgbox.show()
+
         filetypes = [
             ('TrueType/OpenType fonts', FILE_EXTENSIONS),
             ('All files', '*'),
