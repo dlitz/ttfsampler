@@ -22,10 +22,17 @@ __version__ = "0.0"
 __revision__ = "$Id$"
 
 import Tkinter as T
+import tkFileDialog
+
+import os
+import re
+import fnmatch
 
 def pack_widget(_w, **kw):
     _w.pack(**kw)
     return _w
+
+FILE_EXTENSIONS = "*.ttf *.otf *.TTF *.OTF" # List of file exstensions. (NB: tcl substitution will happen on this string.)
 
 class MainWindow(T.Frame):
     def __init__(self, master=None):
@@ -49,7 +56,57 @@ class MainWindow_FontSelector(T.LabelFrame):
         self.widgets['button_removeSelected'] = pack_widget(T.Button(f, text="Remove selected"), side="left", expand=True, fill="x")
 
         # List
-        self.widgets['listbox'] = pack_widget(T.Listbox(self), fill="both", expand=True)
+        self.widgets['listbox'] = pack_widget(T.Listbox(self, selectmode="extended"), fill="both", expand=True)
+
+        # Add event handlers
+        self.widgets['button_addFile']['command'] = self.button_addFile_click
+        self.widgets['button_addFolder']['command'] = self.button_addFolder_click
+        self.widgets['button_removeSelected']['command'] = self.button_removeSelected_click
+
+    def button_addFile_click(self):
+        filetypes = [
+            ('TrueType/OpenType fonts', FILE_EXTENSIONS),
+            ('All files', '*'),
+        ]
+        dialog = tkFileDialog.Open(self, multiple=True, filetypes=filetypes)
+        filenames = dialog.show()
+        if not filenames:   # User pressed "Cancel"
+            return
+        lb = self.widgets['listbox']
+        for filename in filenames:
+            lb.insert("end", filename)
+
+    def button_addFolder_click(self):
+        dialog = tkFileDialog.Directory(self)
+        rootpath = dialog.show()
+
+        if not rootpath:   # User pressed "Cancel"
+            return
+
+        # Build a list of globs
+        gg = {}
+        for g in FILE_EXTENSIONS.split(" "):
+            g = g.lower()
+            gg[g] = re.compile(fnmatch.translate(g), re.I)
+        regexps = gg.values()
+        del gg
+
+        lb = self.widgets['listbox']
+        for (dirpath, dirnames, filenames) in os.walk(rootpath):
+            for filename in filenames:
+                for regexp in regexps:
+                    if regexp.search(filename):
+                        lb.insert("end", os.path.join(dirpath, filename))
+                        break
+
+    def button_removeSelected_click(self):
+        lb = self.widgets['listbox']
+
+        indices = list(lb.curselection())
+        indices.sort(reverse=True)  # Sort in reverse order so we don't delete the wrong items
+
+        for idx in indices:
+            lb.delete(idx)
 
 class MainWindow_OptionsSelector(T.LabelFrame):
     def __init__(self, master):
