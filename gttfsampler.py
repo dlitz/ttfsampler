@@ -273,11 +273,15 @@ class MainWindow_OptionsSelector(T.LabelFrame):
         T.LabelFrame.__init__(self, master, text="Options")
         self.widgets = {}
         self.vars = {
-            'fontSize': T.IntVar(value=12),
-            'specifyText_check': T.BooleanVar(value=False),
-            'specifyText_text': T.StringVar(value="The quick brown fox jumps over the lazy dog."),
-            'sort': T.BooleanVar(value=True),
+            'fontSize': T.IntVar(master),
+            'specifyText_check': T.BooleanVar(master),
+            'specifyText_text': T.StringVar(master),
+            'sort': T.BooleanVar(master),
         }
+        self.vars['fontSize'].set(12)
+        self.vars['specifyText_check'].set(False)
+        self.vars['specifyText_text'].set("The quick brown fox jumps over the lazy dog.")
+        self.vars['sort'].set(True),
 
         # Font size
         f = pack_widget(T.Frame(self), anchor="w")
