@@ -23,12 +23,17 @@ __revision__ = "$Id$"
 import sys
 import getopt
 import locale
+import logging
 
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
+
+VERBOSITY_1 = "<1>"
+VERBOSITY_2 = "<2>"
+VERBOSITY_3 = "<3>"
 
 def exit_usage():
     print "Usage: %s [-fSv] [-s font-size] [-t text] -o output.pdf font.ttf..." % (sys.argv[0],)
@@ -46,157 +51,235 @@ Create a sample sheet from a list of TrueType fonts.
     print "Version %s" % (__version__,)
     sys.exit(2)
 
-def verbose_print(verbosity, s):
-    if verbosity_setting >= verbosity:
-        print s
+class Config(object):
+    def __init__(self):
+        self.verbosity = 0
+        self.allow_broken_fonts = False
+        self.input_filenames = None
+        self.output_filename = None
+        self.font_size = 12.0
+        self.sort_fonts = True
+        self.top_margin = 1.0 * inch
+        self.bottom_margin = 1.0 * inch
+        self.specified_text = None
 
-def render_line(text, font_id, font_size, face_name):
-    start_x = text.getX()
-    if specified_text is not None:
-        text.setFont(font_id, font_size)
-        text.textOut(specified_text)
-        text.setFont("Times-Roman", font_size)
-        text.textOut(u"  (%s)" % (face_name,))
-    else:
-        text.setFont(font_id, font_size)
-        text.textOut(face_name)
-    end_x = text.getX()
-    text.textLine("")
-    width = abs(end_x - start_x)
-    return width
+class error(Exception):
+    pass
 
-# Parse arguments
-try:
-    (options, arguments) = getopt.getopt(sys.argv[1:], "vfSo:s:t:")
-except getopt.GetoptError, exc:
-    print >>sys.stderr, "error: %s" % (str(exc),)
-    exit_usage()
-
-verbosity_setting = 0
-allow_broken_fonts = False
-output_filename = None
-font_size = 12.0
-sort_fonts = True
-top_margin = 1.0 * inch
-bottom_margin = 1.0 * inch
-specified_text = None
-for (opt, optarg) in options:
-    if opt == '-v':
-        verbosity_setting += 1
-    elif opt == '-f':
-        allow_broken_fonts = True
-    elif opt == '-o':
-        output_filename = optarg
-    elif opt == '-s':
-        font_size = float(optarg)
-    elif opt == '-S':
-        sort_fonts = False
-    elif opt == '-t':
-        specified_text = optarg.decode(locale.getpreferredencoding())
-    else:
-        raise AssertionErrror("BUG: unrecognized option %r" % (opt,))
-if not arguments:
-    print >>sys.stderr, "error: no font(s) specified"
-    exit_usage()
-if output_filename is None:
-    print >>sys.stderr, "error: no output file specified"
-    exit_usage()
-
-verbose_print(1, "Loading fonts...")
-fonts = []
-psfontnames = {}
-skipped_fonts = 0
-for i, ttf_filename in enumerate(arguments):
-    font_id = "_font%d" % (i,)
-    verbose_print(2, "  Loading font %s ..." % (ttf_filename,))
-    try:
-        font = TTFont(font_id, ttf_filename)
-    except TTFError, exc:
-        if allow_broken_fonts:
-            print >>sys.stderr, "warning: skipping font %s: %s" % (ttf_filename, str(exc))
-            skipped_fonts += 1
-            continue
+class TTFSampler(object):
+    def __init__(self, config=None, log=None):
+        if config is None:
+            self.cfg = Config()
         else:
-            print >>sys.stderr, "error: can't use font %s: %s" % (ttf_filename, str(exc))
-            sys.exit(1)
+            self.cfg = config
 
-    face_name = font.face.fullName
-    # Decode face name to Unicode.  Try UTF-8, and fall back to Latin-1
-    if not isinstance(face_name, unicode):
+        if log is None:
+            self.log = self.make_logger()
+        else:
+            self.log = log
+
+    def make_logger(self):
+        return logging.getLogger(self.__class__.__name__)
+
+    def verbose_print(self, verbosity, s):
+        if self.cfg.verbosity >= verbosity:
+            self.log.debug("<%d>%s" % (verbosity, s))
+
+    def print_error(self, msg):
+        self.log.error(msg)
+
+    def print_warning(self, msg):
+        self.log.warning(msg)
+
+    def run(self):
+        self.load_fonts()
+        self.register_fonts()
+        self.render()
+        self.save()
+
+    def render_line(self, text, font_id, font_size, face_name):
+        start_x = text.getX()
+        if self.cfg.specified_text is not None:
+            text.setFont(font_id, font_size)
+            text.textOut(self.cfg.specified_text)
+            text.setFont("Times-Roman", font_size)
+            text.textOut(u"  (%s)" % (face_name,))
+        else:
+            text.setFont(font_id, font_size)
+            text.textOut(face_name)
+        end_x = text.getX()
+        text.textLine("")
+        width = abs(end_x - start_x)
+        return width
+
+    def load_fonts(self):
+        self.log.debug(VERBOSITY_1 + "Loading fonts...")
+        self.fonts = []
+        psfontnames = {}
+        self.skipped_fonts = 0
+        for i, ttf_filename in enumerate(self.cfg.input_filenames):
+            font_id = "_font%d" % (i,)
+            self.log.debug(VERBOSITY_2 + "  Loading font %s ..." % (ttf_filename,))
+            try:
+                font = TTFont(font_id, ttf_filename)
+            except TTFError, exc:
+                if self.cfg.allow_broken_fonts:
+                    self.log.warning("skipping font %s: %s" % (ttf_filename, str(exc)))
+                    self.skipped_fonts += 1
+                    continue
+                else:
+                    msg = "can't use font %s: %s" % (ttf_filename, str(exc))
+                    self.log.error(msg)
+                    raise error(msg)
+
+            face_name = font.face.fullName
+            # Decode face name to Unicode.  Try UTF-8, and fall back to Latin-1
+            if not isinstance(face_name, unicode):
+                try:
+                    face_name = face_name.decode('utf-8')
+                except UnicodeDecodeError:
+                    face_name = face_name.decode('latin1')
+
+            if font.face.name in psfontnames:
+                if self.cfg.allow_broken_fonts:
+                    self.log.warning("skipping font %s; has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name]))
+                    self.skipped_fonts += 1
+                    continue
+                else:
+                    msg = "error: font %s has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
+                    self.log.error(msg)
+                    raise error(msg)
+            else:
+                psfontnames[font.face.name] = ttf_filename
+
+            self.log.debug(VERBOSITY_3 + "  -> %r" % (face_name,))
+            self.fonts.append((font_id, font, face_name))
+
+        # Sort fonts by face_name
+        if self.cfg.sort_fonts:
+            self.fonts.sort(key=lambda tup: tup[2])
+
+    def register_fonts(self):
+        # Register fonts
+        self.log.debug(VERBOSITY_1 + "Registering %d fonts..." % (len(self.fonts),))
+        for (font_id, font, face_name) in self.fonts:
+            self.log.debug(VERBOSITY_2 + "  Registering font %r ..." % (face_name,))
+            pdfmetrics.registerFont(font)
+
+    def render(self):
+        self.log.debug(VERBOSITY_2 + "Setting up canvas ...")
+        page_size = letter
+        self.pdf = Canvas(self.cfg.output_filename, pagesize=page_size)
+        self.pdf.setStrokeColorRGB(1, 0, 0)
+
+        page_height = page_size[1] - self.cfg.top_margin - self.cfg.bottom_margin
+
+        i = 0
+        self.page_count = 0
+        while i < len(self.fonts):
+            self.page_count += 1
+            self.log.debug(VERBOSITY_1 + "Rendering page %d ..." % (self.page_count,))
+
+            # Render once so we can figure out the bounding box
+            text = self.pdf.beginText(0, 0)
+            width = height = 0
+            j = i
+            page_fonts = [] # fonts shown on this page
+            while j < len(self.fonts):
+                (font_id, font, face_name) = self.fonts[j]
+                prev_height = height
+                self.log.debug(VERBOSITY_3 + "  Pre-rendering font %r" % (face_name,))
+                linewidth = self.render_line(text, font_id, self.cfg.font_size, face_name)
+                width = max(width, linewidth)
+                height = abs(text.getY())
+                if height > page_height:
+                    height = prev_height
+                    break
+                else:
+                    page_fonts.append(self.fonts[j])
+                    j += 1
+
+            # Render again, centering the text
+            text = self.pdf.beginText((page_size[0]-width)/2.0, (page_size[1]+height)/2.0)
+            for (font_id, font, face_name) in page_fonts:
+                self.log.debug(VERBOSITY_2 + "  Rendering font %r" % (face_name,))
+                self.render_line(text, font_id, self.cfg.font_size, face_name)
+
+            self.pdf.drawText(text)
+            self.pdf.showPage()
+            i += len(page_fonts)
+
+        if self.skipped_fonts:
+            self.log.warning("skipped %d fonts" % (self.skipped_fonts,))
+
+    def save(self):
+        self.log.debug(VERBOSITY_1 + "Writing %d pages (%d fonts) to %r" % (self.page_count, len(self.fonts), self.cfg.output_filename,))
+        self.pdf.save()
+
+class CLILog(object):
+    def __init__(self, config):
+        self.cfg = config
+
+    def debug(self, msg):
+        if msg.startswith(VERBOSITY_3) and self.cfg.verbosity >= 3:
+            print msg[len(VERBOSITY_3):]
+        elif msg.startswith(VERBOSITY_2) and self.cfg.verbosity >= 2:
+            print msg[len(VERBOSITY_2):]
+        elif msg.startswith(VERBOSITY_1) and self.cfg.verbosity >= 1:
+            print msg[len(VERBOSITY_1):]
+
+    def warning(self, msg):
+        print >>sys.stderr, "warning: %s" % (msg,)
+
+    def error(self, msg):
+        print >>sys.stderr, "error: %s" % (msg,)
+
+class CLI(object):
+    def __init__(self):
+        self.cfg = Config()
+        self.log = CLILog(self.cfg)
+
+    def run(self):
+        self.parse_args()
+        TTFSampler(self.cfg, self.log).run()
+
+    def parse_args(self, args=None, program_name=None):
+        if program_name is None:
+            program_name = sys.argv[0]
+        if args is None:
+            args = sys.argv[1:]
+
+        # Parse arguments
         try:
-            face_name = face_name.decode('utf-8')
-        except UnicodeDecodeError:
-            face_name = face_name.decode('latin1')
+            (options, arguments) = getopt.getopt(args, "vfSo:s:t:")
+        except getopt.GetoptError, exc:
+            self.log.error(str(exc))
+            exit_usage()
 
-    if font.face.name in psfontnames:
-        if allow_broken_fonts:
-            print >>sys.stderr, "warning: skipping font %s; has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
-            skipped_fonts += 1
-            continue
-        else:
-            print >>sys.stderr, "error: font %s has same name (%r) as font %s" % (ttf_filename, font.face.name, psfontnames[font.face.name])
-            sys.exit(1)
-    else:
-        psfontnames[font.face.name] = ttf_filename
+        for (opt, optarg) in options:
+            if opt == '-v':
+                self.cfg.verbosity += 1
+            elif opt == '-f':
+                self.cfg.allow_broken_fonts = True
+            elif opt == '-o':
+                self.cfg.output_filename = optarg
+            elif opt == '-s':
+                self.cfg.font_size = float(optarg)
+            elif opt == '-S':
+                self.cfg.sort_fonts = False
+            elif opt == '-t':
+                self.cfg.specified_text = optarg.decode(locale.getpreferredencoding())
+            else:
+                raise AssertionErrror("BUG: unrecognized option %r" % (opt,))
+        if not arguments:
+            self.log.error("no font(s) specified")
+            exit_usage()
+        if self.cfg.output_filename is None:
+            self.log.error("no output file specified")
+            exit_usage()
+        self.cfg.input_filenames = arguments
 
-    verbose_print(3, "  -> %r" % (face_name,))
-    fonts.append((font_id, font, face_name))
-
-# Sort fonts by face_name
-if sort_fonts:
-    fonts.sort(key=lambda tup: tup[2])
-
-# Register fonts
-verbose_print(1, "Registering %d fonts..." % (len(fonts),))
-for (font_id, font, face_name) in fonts:
-    verbose_print(2, "  Registering font %r ..." % (face_name,))
-    pdfmetrics.registerFont(font)
-
-verbose_print(2, "Setting up canvas ...")
-page_size = letter
-pdf = Canvas(output_filename, pagesize=page_size)
-pdf.setStrokeColorRGB(1, 0, 0)
-
-page_height = page_size[1] - top_margin - bottom_margin
-
-i = 0
-page_count = 0
-while i < len(fonts):
-    page_count += 1
-    verbose_print(1, "Rendering page %d ..." % (page_count,))
-
-    # Render once so we can figure out the bounding box
-    text = pdf.beginText(0, 0)
-    width = height = 0
-    j = i
-    page_fonts = [] # fonts shown on this page
-    while j < len(fonts):
-        (font_id, font, face_name) = fonts[j]
-        prev_height = height
-        verbose_print(3, "  Pre-rendering font %r" % (face_name,))
-        linewidth = render_line(text, font_id, font_size, face_name)
-        width = max(width, linewidth)
-        height = abs(text.getY())
-        if height > page_height:
-            height = prev_height
-            break
-        else:
-            page_fonts.append(fonts[j])
-            j += 1
-
-    # Render again, centering the text
-    text = pdf.beginText((page_size[0]-width)/2.0, (page_size[1]+height)/2.0)
-    for (font_id, font, face_name) in page_fonts:
-        verbose_print(2, "  Rendering font %r" % (face_name,))
-        render_line(text, font_id, font_size, face_name)
-
-    pdf.drawText(text)
-    pdf.showPage()
-    i += len(page_fonts)
-
-if skipped_fonts:
-    print >>sys.stderr, "warning: skipped %d fonts" % (skipped_fonts,)
-verbose_print(1, "Writing %d pages (%d fonts) to %r" % (page_count, len(fonts), output_filename,))
-pdf.save()
+if __name__ == '__main__':
+    CLI().run()
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
