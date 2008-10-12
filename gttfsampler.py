@@ -232,6 +232,8 @@ class MainWindow_FontSelector(T.LabelFrame):
 
         lb = self.widgets['listbox']
         for (dirpath, dirnames, filenames) in os.walk(rootpath):
+            dirnames.sort()
+            filenames.sort()
             for filename in filenames:
                 for regexp in regexps:
                     if regexp.search(filename):
