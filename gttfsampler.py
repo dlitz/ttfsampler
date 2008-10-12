@@ -41,7 +41,7 @@ class MainWindow(T.Frame):
         self.pack(expand=True, fill="both")
         self.widgets = {}
         self.widgets['font_selector'] = pack_widget(MainWindow_FontSelector(self), fill="both", expand=True)
-        self.widgets['options_selector'] = pack_widget(MainWindow_OptionsSelector(self), fill="x", expand=True)
+        self.widgets['options_selector'] = pack_widget(MainWindow_OptionsSelector(self), fill="x")
         self.widgets['button_savePDF'] = pack_widget(T.Button(self, text="Save PDF..."))
 
 class MainWindow_FontSelector(T.LabelFrame):
