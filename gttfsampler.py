@@ -167,6 +167,7 @@ class MainWindow(T.Frame):
         cfg.font_size = float(options['fontSize'])
         cfg.allow_broken_fonts = True   # Always skip broken/duplicate fonts
         cfg.specified_text = options['specifyText']
+        cfg.sort_fonts = options['sort']
         cfg.input_filenames = font_filenames
         cfg.output_filename = output_filename
 
@@ -273,6 +274,7 @@ class MainWindow_OptionsSelector(T.LabelFrame):
             'fontSize': T.IntVar(value=12),
             'specifyText_check': T.BooleanVar(value=False),
             'specifyText_text': T.StringVar(value="The quick brown fox jumps over the lazy dog."),
+            'sort': T.BooleanVar(value=True),
         }
 
         # Font size
@@ -285,9 +287,13 @@ class MainWindow_OptionsSelector(T.LabelFrame):
         self.widgets['check_specifyText'] = pack_widget(T.Checkbutton(f, text="Specify text:", justify="left", variable=self.vars['specifyText_check']), side="left")
         self.widgets['text_specifyText'] = pack_widget(T.Entry(f, textvariable=self.vars['specifyText_text']), side="left", expand=True, fill="x")
 
+        # Sort fonts
+        self.widgets['check_sort'] = pack_widget(T.Checkbutton(self, text="Sort fonts by name", justify="left", variable=self.vars['sort']), anchor="w")
+
     def get_options(self):
         retval = {}
         retval['fontSize'] = self.vars['fontSize'].get()
+        retval['sort'] = self.vars['sort'].get()
         if self.vars['specifyText_check'].get():
             retval['specifyText'] = self.vars['specifyText_text'].get()
         else:
