@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ###########################################################################
 
-__version__ = "0.4"
+__version__ = "0.5"
 __revision__ = "$Id$"
 
 import Tkinter as T
